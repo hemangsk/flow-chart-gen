@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Chart Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Flow Chart Generator</h1>
+    <div class="container">
+        <div id="input-area">
+            <div class="controls">
+                <select id="diagram-type">
+                    <option value="activity">Activity Diagram</option>
+                    <option value="class">Class Diagram</option>
+                    <option value="sequence">Sequence Diagram</option>
+                </select>
+                <div class="relationship-type">
+                    <label>Relationship:</label>
+                    <select id="relationship-type">
+                        <option value="-->">Association</option>
+                        <option value="--|>">Inheritance</option>
+                        <option value="--*">Composition</option>
+                        <option value="--o">Aggregation</option>
+                    </select>
+                </div>
+            </div>
+            <div id="help-text" class="help-text"></div>
+            <div class="input-wrapper">
+                <textarea id="text-input" placeholder="Describe steps in plain English" rows="1" disabled></textarea>
+                <div class="input-highlighter"></div>
+            </div>
+            <div id="sentences-list"></div>
+        </div>
+        <div class="diagram-container">
+            <div class="diagram-controls">
+                <button id="download-svg" class="download-button">Download SVG</button>
+            </div>
+            <div id="diagram"></div>
+        </div>
+        <div class="glossary-sidebar">
+            <h3>Flow Chart Shapes Guide</h3>
+            <div class="shape-item">
+                <h4>⬭ Oval</h4>
+                <p>Used for start and end points of the flow</p>
+            </div>
+            <div class="shape-item">
+                <h4>⬚ Rectangle</h4>
+                <p>Represents a process, action, or step in the flow</p>
+            </div>
+            <div class="shape-item">
+                <h4>◇ Diamond</h4>
+                <p>Indicates a decision point with multiple paths</p>
+            </div>
+            <div class="shape-item">
+                <h4>⭕ Circle</h4>
+                <p>Represents a connection point or continuation</p>
+            </div>
+            <div class="shape-item">
+                <h4>→ Arrow</h4>
+                <p>Shows the direction of flow between elements</p>
+            </div>
+            <div class="shape-item">
+                <h4>Document</h4>
+                <p>Represents input or output documentation</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 

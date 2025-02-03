@@ -1,0 +1,326 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.container {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 20px;
+}
+#input-area {
+    display: flex;
+    flex-direction: column;
+}
+#text-input {
+    padding: 12px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: 500;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.3s;
+    font-family: 'Consolas', monospace;
+    resize: none;
+    overflow: hidden;
+    min-height: 156px;
+    width: 100%;
+    box-sizing: border-box;
+    line-height: 1.5;
+    display: block;
+    padding-top: 16px;
+}
+#text-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+#diagram {
+    border: 1px solid #ccc;
+    padding: 20px;
+    min-height: 400px;
+}
+.controls {
+    margin: 10px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+.relationship-type {
+    margin: 5px 0;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+.relationship-type label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 14px;
+}
+select#relationship-type {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 1em;
+}
+.help-text {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 14px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+.help-text h3 {
+    margin-top: 0;
+    color: #333;
+}
+.help-text ul {
+    margin: 0;
+    padding-left: 20px;
+}
+.help-text li {
+    margin: 5px 0;
+    color: #666;
+}
+.validation-status {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.validation-status.valid {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.validation-status.invalid {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.validation-status.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.validation-status ul {
+    margin: 5px 0;
+    padding-left: 20px;
+}
+
+.validation-success {
+    color: #155724;
+    font-weight: bold;
+}
+
+.diagram-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.diagram-controls {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.download-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.download-button:hover {
+    background-color: #45a049;
+}
+
+.download-button:active {
+    background-color: #3d8b40;
+}
+
+.glossary-sidebar {
+    font-size: 12px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 1px solid #dee2e6;
+}
+
+.glossary-sidebar h3 {
+    color: #333;
+    margin-top: 0;
+    font-size: 14px;
+}
+
+.shape-item {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.shape-item h4 {
+    margin: 0 0 4px 0;
+    font-size: 13px;
+    color: #444;
+}
+
+.shape-item p {
+    margin: 0;
+    color: #666;
+    line-height: 1.4;
+}
+
+.shape-selector {
+    margin: 10px 0;
+    padding: 8px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Syntax highlighting classes */
+.keyword {
+    color: #0033cc;
+    font-weight: bold;
+}
+
+.flow-text {
+    color: #2c662d;
+}
+
+.condition {
+    color: #b32d00;
+}
+
+.action {
+    color: #4d4d4d;
+}
+
+.connection {
+    color: #666699;
+}
+
+/* Input wrapper for syntax highlighting */
+.input-wrapper {
+    position: relative;
+    margin-bottom: 10px;
+    width: 100%;
+    display: flex;
+}
+
+.input-highlighter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    padding: 12px;
+    padding-top: 16px;
+    font-size: 18px;
+    font-family: 'Consolas', monospace;
+    color: transparent;
+    background: transparent;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Add styles for the sentences list */
+#sentences-list {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    display: none;  /* Hide by default */
+}
+
+#sentences-list:not(:empty) {
+    display: block;  /* Show when there are sentences */
+}
+
+.sentence-item {
+    padding: 8px;
+    margin: 4px 0;
+    border-radius: 4px;
+    background-color: white;
+    border: 1px solid #e9ecef;
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    display: flex;
+    align-items: flex-start;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.sentence-item:hover {
+    background-color: #f8f9fa;
+}
+
+.sentence-number {
+    color: #666;
+    font-size: 12px;
+    margin-right: 8px;
+    min-width: 20px;
+    flex-shrink: 0;
+}
+
+/* Ensure syntax highlighting is visible in the sentences list */
+.sentence-item .keyword,
+.sentence-item .condition,
+.sentence-item .action,
+.sentence-item .connection,
+.sentence-item .flow-text {
+    color: inherit;  /* Reset color for highlighted text */
+}
+
+select#diagram-type {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+}
+
+select#diagram-type:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+select#diagram-type:hover {
+    border-color: #4CAF50;
+}
