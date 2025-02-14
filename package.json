@@ -32,6 +32,7 @@
     "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
-    "mermaid": "^10.2.4"
+    "mermaid": "^10.2.4",
+    "neverthrow": "^8.1.1"
   }
 }

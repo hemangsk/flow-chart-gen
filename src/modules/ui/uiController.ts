@@ -10,11 +10,13 @@ import { umlPatterns } from '../diagram/diagramPatterns';
 type DiagramType = keyof typeof helpText;
 
 export class UIController {
-    private sentences: Sentence[] = [];
     private diagramGenerator: DiagramGenerator;
     private syntaxHighlighter: SyntaxHighlighter;
     private validationService: ValidationService;
     private svgExporter: SVGExporter;
+    private sentences: Sentence[] = [];
+    private mermaidCode: string = '';
+    private currentDiagramType: DiagramType = 'activity';
 
     // DOM Elements
     private readonly textInput: HTMLTextAreaElement;
@@ -82,14 +84,14 @@ export class UIController {
     }
 
     public initialize(): void {
-        this.setupEventListeners();
+        this.initializeEventListeners();
+        this.initializeMermaidCodeEditor();
         this.updateHelpText();
-        this.updateRelationshipVisibility();
         this.textInput.disabled = false;
         this.keepInputFocused();
     }
 
-    private setupEventListeners(): void {
+    private initializeEventListeners(): void {
         this.textInput.addEventListener('input', this.handleInput.bind(this));
         this.textInput.addEventListener('keydown', this.handleKeyDown.bind(this));
         this.diagramType.addEventListener('change', this.handleDiagramTypeChange.bind(this));
@@ -229,13 +231,32 @@ export class UIController {
     }
 
     private async updateDiagram(): Promise<void> {
-        try {
-            const diagram = this.diagramGenerator.generateActivityDiagram(this.sentences);
-            this.diagramDiv.innerHTML = `<pre class="mermaid">${diagram}</pre>`;
-            await mermaid.init(undefined, document.querySelectorAll('.mermaid'));
-        } catch (error) {
-            console.error('Error updating diagram:', error);
-            this.diagramDiv.innerHTML = '<div class="error">Error rendering diagram</div>';
+        let diagram = '';
+        
+        switch (this.currentDiagramType) {
+            case 'activity':
+                diagram = this.diagramGenerator.generateActivityDiagram(this.sentences);
+                break;
+            case 'class':
+                // Add other diagram type handlers
+                break;
+            case 'sequence':
+                // Add other diagram type handlers
+                break;
+        }
+        
+        this.updateMermaidCode(diagram);
+        
+        const diagramElement = document.getElementById('diagram');
+        if (diagramElement) {
+            diagramElement.innerHTML = '';
+            try {
+                const { svg } = await mermaid.render('diagram-svg', diagram);
+                diagramElement.innerHTML = svg;
+            } catch (error) {
+                console.error('Failed to render diagram:', error);
+                diagramElement.innerHTML = '<p>Error rendering diagram</p>';
+            }
         }
     }
 
@@ -307,7 +328,8 @@ export class UIController {
 
     private handleBodyClick(e: MouseEvent): void {
         // Don't refocus if text is selected
-        if (window.getSelection()?.toString()) {
+        if (window.getSelection()?.toString() ||
+            document.activeElement?.classList.contains('mermaid-code-editor')) {
             return;
         }
         
@@ -361,5 +383,59 @@ export class UIController {
             this.updateDiagram();
             this.updateSentencesList();
         }
+    }
+
+    private initializeMermaidCodeEditor(): void {
+        const codeEditor = document.getElementById('mermaid-code') as HTMLTextAreaElement;
+        const copyButton = document.getElementById('copy-code');
+        const applyButton = document.getElementById('apply-code');
+
+        if (codeEditor && copyButton && applyButton) {
+            copyButton.addEventListener('click', () => this.copyMermaidCode());
+            applyButton.addEventListener('click', () => this.applyMermaidCodeChanges());
+            codeEditor.addEventListener('input', () => this.handleCodeEditorInput());
+        }
+    }
+
+    private updateMermaidCode(code: string): void {
+        this.mermaidCode = code;
+        const codeEditor = document.getElementById('mermaid-code') as HTMLTextAreaElement;
+        if (codeEditor) {
+            codeEditor.value = code;
+        }
+    }
+
+    private async copyMermaidCode(): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(this.mermaidCode);
+            // Optional: Show a success message
+        } catch (err) {
+            console.error('Failed to copy code:', err);
+        }
+    }
+
+    private async applyMermaidCodeChanges(): Promise<void> {
+        const codeEditor = document.getElementById('mermaid-code') as HTMLTextAreaElement;
+        if (!codeEditor) return;
+
+        try {
+            // Validate the Mermaid syntax
+            await mermaid.parse(codeEditor.value);
+            
+            // If valid, update the diagram
+            const diagram = document.getElementById('diagram');
+            if (diagram) {
+                diagram.innerHTML = '';
+                const { svg } = await mermaid.render('diagram-svg', codeEditor.value);
+                diagram.innerHTML = svg;
+            }
+        } catch (error) {
+            console.error('Invalid Mermaid syntax:', error);
+            // Optional: Show an error message to the user
+        }
+    }
+
+    private handleCodeEditorInput(): void {
+        // Optional: Add real-time validation or other features
     }
 } 
