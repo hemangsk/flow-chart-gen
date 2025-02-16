@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 // Get the subdirectory from environment variable or use default
 const subdirectory = process.env.SUBDIRECTORY || 'flow-chart-gen';
+const isProduction = process.env.NODE_ENV === 'production';
 
 module.exports = {
     entry: './src/index.ts',
@@ -25,13 +26,14 @@ module.exports = {
     output: {
         filename: 'bundle.js',
         path: path.resolve(__dirname, 'dist'),
-        publicPath: process.env.NODE_ENV === 'production' ? `/${subdirectory}/` : '/'
+        publicPath: isProduction ? `/${subdirectory}/` : '/'
     },
     plugins: [
         new HtmlWebpackPlugin({
             template: './public/index.html',
             filename: 'index.html',
-            inject: 'body'
+            inject: 'body',
+            base: isProduction ? `/${subdirectory}/` : '/'
         })
     ],
     devServer: {
