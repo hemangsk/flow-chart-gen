@@ -24,15 +24,18 @@ body {
     color: #1a1a1a;
     background-color: #fafafa;
 }
+
 .container {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     gap: 20px;
 }
+
 #input-area {
     display: flex;
     flex-direction: column;
 }
+
 #text-input {
     padding: 12px;
     margin-bottom: 10px;
@@ -53,16 +56,20 @@ body {
     display: block;
     padding-top: 16px;
 }
+
 #text-input:focus {
     outline: none;
     border-color: #404040;
     box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.1);
 }
+
 #diagram {
     border: 1px solid #ccc;
     padding: 20px;
     min-height: 400px;
+    display: flex;
 }
+
 .controls {
     margin: 10px 0;
     padding: 15px;
@@ -70,18 +77,21 @@ body {
     border-radius: 6px;
     border: 1px solid #e0e0e0;
 }
+
 .relationship-type {
     margin: 5px 0;
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid #dee2e6;
 }
+
 .relationship-type label {
     display: block;
     margin-bottom: 8px;
     color: #666;
     font-size: 14px;
 }
+
 select#relationship-type {
     width: 100%;
     padding: 8px;
@@ -98,6 +108,11 @@ select#relationship-type {
     background-size: 1em;
     color: #1a1a1a;
 }
+
+svg {
+    margin: auto;
+}
+
 .help-text {
     margin: 15px 0;
     padding: 10px;
@@ -108,20 +123,24 @@ select#relationship-type {
     -webkit-user-select: text;
     color: #404040;
 }
+
 .help-text h3 {
     margin-top: 0;
     color: #333;
     font-weight: 600;
 }
+
 .help-text ul {
     margin: 0;
     padding-left: 20px;
 }
+
 .help-text li {
     margin: 5px 0;
     color: #666;
     font-weight: 400;
 }
+
 .validation-status {
     margin: 10px 0;
     padding: 10px;
@@ -287,11 +306,13 @@ select#relationship-type {
     background-color: #f8f9fa;
     border-radius: 6px;
     border: 1px solid #dee2e6;
-    display: none;  /* Hide by default */
+    display: none;
+    /* Hide by default */
 }
 
 #sentences-list:not(:empty) {
-    display: block;  /* Show when there are sentences */
+    display: block;
+    /* Show when there are sentences */
 }
 
 .sentence-item {
@@ -309,10 +330,20 @@ select#relationship-type {
     -webkit-user-select: text;
     min-height: 40px;
     gap: 12px;
+    cursor: grab;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .sentence-item:hover {
     background-color: #f8f9fa;
+}
+
+.sentence-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    background-color: #f8f9fa;
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .sentence-number {
@@ -329,7 +360,8 @@ select#relationship-type {
 .sentence-item .action,
 .sentence-item .connection,
 .sentence-item .flow-text {
-    color: inherit;  /* Reset color for highlighted text */
+    color: inherit;
+    /* Reset color for highlighted text */
 }
 
 .sentence-content {
@@ -340,10 +372,32 @@ select#relationship-type {
     min-height: 32px;
 }
 
-.sentence-text {
-    flex: 1;
+.drag-handle {
+    color: #999;
+    cursor: grab;
+    font-size: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: color 0.2s;
+}
+
+.dragging .drag-handle {
+    cursor: grabbing;
+}
+
+.sentence-item:hover .drag-handle {
+    color: #666;
+}
+
+.sentence-type-icon {
+    color: #666;
+    font-size: 16px;
+    min-width: 20px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    height: 32px;
+    flex-shrink: 0;
 }
 
 .sentence-edit {
@@ -421,7 +475,8 @@ select#relationship-type {
     transition: opacity 0.2s;
     align-items: center;
     height: 32px;
-    flex-shrink: 0;  /* Prevent actions from shrinking */
+    flex-shrink: 0;
+    /* Prevent actions from shrinking */
 }
 
 .sentence-item:hover .sentence-actions {
@@ -538,4 +593,53 @@ select#diagram-type:hover {
 
 .mermaid-code-editor:focus {
     background-color: #fff;
+}
+
+.error-message {
+    padding: 16px;
+    margin: 16px 0;
+    border-radius: 6px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.error-message h3 {
+    margin: 0 0 8px 0;
+    color: #dc2626;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.error-message p {
+    margin: 0;
+    color: #7f1d1d;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.warnings-message {
+    padding: 16px;
+    margin: 16px 0;
+    border-radius: 6px;
+    background-color: #fffbeb;
+    border: 1px solid #fef3c7;
+}
+
+.warnings-message h3 {
+    margin: 0 0 8px 0;
+    color: #d97706;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.warnings-message ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.warnings-message li {
+    color: #92400e;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 4px 0;
 }

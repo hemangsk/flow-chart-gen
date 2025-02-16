@@ -28,10 +28,4 @@ export interface DiagramPatterns {
 export interface SyntaxPattern {
     pattern: RegExp;
     class: string;
-}
-
-export interface ValidationResult {
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
 } 

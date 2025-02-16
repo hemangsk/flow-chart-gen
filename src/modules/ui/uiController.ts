@@ -2,8 +2,10 @@ import { Sentence, ProcessedText } from '../../types/interfaces';
 import { helpText } from '../../constants/helpText';
 import { DiagramGenerator } from '../diagram/diagramGenerator';
 import { SyntaxHighlighter } from './syntaxHighlighter';
-import { ValidationService } from '../utils/validation';
+import { ValidationService, ValidationWarnings } from '../utils/validation';
 import { SVGExporter } from '../utils/svgExporter';
+import { ValidationError, DiagramError, RenderError } from '../../types/errors';
+import { ok, err, Result } from 'neverthrow';
 import mermaid from 'mermaid';
 import { umlPatterns } from '../diagram/diagramPatterns';
 
@@ -97,7 +99,11 @@ export class UIController {
         this.diagramType.addEventListener('change', this.handleDiagramTypeChange.bind(this));
         this.downloadButton.addEventListener('click', this.handleDownload.bind(this));
         document.body.addEventListener('click', this.handleBodyClick.bind(this));
+        
+        // Sentence list event listeners
         this.sentencesList.addEventListener('click', this.handleSentenceAction.bind(this));
+        this.initializeDragAndDrop();
+        
         this.sentencesList.addEventListener('click', (e: Event) => {
             const target = e.target as HTMLElement;
             if (target.classList.contains('sentence-edit-action')) {
@@ -111,6 +117,7 @@ export class UIController {
                 }
             }
         });
+        
         this.sentencesList.addEventListener('keydown', (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
             if (target.classList.contains('sentence-edit-input')) {
@@ -120,6 +127,70 @@ export class UIController {
                 } else if (e.key === 'Escape') {
                     this.updateSentencesList();
                 }
+            }
+        });
+    }
+
+    private initializeDragAndDrop(): void {
+        let draggedItem: HTMLElement | null = null;
+        let draggedIndex: number = -1;
+
+        this.sentencesList.addEventListener('dragstart', (e: DragEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.classList.contains('sentence-item')) return;
+            
+            draggedItem = target;
+            draggedIndex = Array.from(this.sentencesList.children).indexOf(target);
+            target.classList.add('dragging');
+            
+            // Set drag image to the entire sentence item
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', draggedIndex.toString());
+            }
+        });
+
+        this.sentencesList.addEventListener('dragend', (e: DragEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.classList.contains('sentence-item')) return;
+            
+            target.classList.remove('dragging');
+            draggedItem = null;
+            draggedIndex = -1;
+        });
+
+        this.sentencesList.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            if (!draggedItem) return;
+
+            const target = e.target as HTMLElement;
+            const sentenceItem = target.closest('.sentence-item');
+            if (!sentenceItem || sentenceItem === draggedItem) return;
+
+            const currentItems = Array.from(this.sentencesList.children);
+            const draggedRect = draggedItem.getBoundingClientRect();
+            const targetRect = sentenceItem.getBoundingClientRect();
+            const dropIndex = currentItems.indexOf(sentenceItem);
+            
+            if (dropIndex > draggedIndex) {
+                sentenceItem.parentNode?.insertBefore(draggedItem, sentenceItem.nextSibling);
+            } else {
+                sentenceItem.parentNode?.insertBefore(draggedItem, sentenceItem);
+            }
+        });
+
+        this.sentencesList.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            if (!draggedItem) return;
+
+            const newIndex = Array.from(this.sentencesList.children).indexOf(draggedItem);
+            if (newIndex !== draggedIndex && newIndex !== -1) {
+                // Update the sentences array
+                const [movedSentence] = this.sentences.splice(draggedIndex, 1);
+                this.sentences.splice(newIndex, 0, movedSentence);
+                
+                // Update the diagram
+                this.updateDiagram();
             }
         });
     }
@@ -235,8 +306,26 @@ export class UIController {
         
         switch (this.currentDiagramType) {
             case 'activity':
-                diagram = this.diagramGenerator.generateActivityDiagram(this.sentences);
+                const validationResult = this.validationService.validateActivityDiagram(this.sentences);
+                
+                if (validationResult.isErr()) {
+                    this.showError(validationResult.error.message);
+                    return;
+                }
+
+                const { warnings } = validationResult.value;
+                this.showWarnings(warnings);
+
+                const diagramResult = this.diagramGenerator.generateActivityDiagram(this.sentences);
+                
+                if (diagramResult.isErr()) {
+                    this.showError(diagramResult.error.message);
+                    return;
+                }
+
+                diagram = diagramResult.value;
                 break;
+
             case 'class':
                 // Add other diagram type handlers
                 break;
@@ -254,8 +343,8 @@ export class UIController {
                 const { svg } = await mermaid.render('diagram-svg', diagram);
                 diagramElement.innerHTML = svg;
             } catch (error) {
-                console.error('Failed to render diagram:', error);
-                diagramElement.innerHTML = '<p>Error rendering diagram</p>';
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                this.showError(`Failed to render diagram: ${message}`);
             }
         }
     }
@@ -269,9 +358,10 @@ export class UIController {
     private createSentenceElement(sentence: Sentence): string {
         const icon = this.getIconForType(sentence.uml.elements[0]?.type);
         return `
-            <div class="sentence-item">
+            <div class="sentence-item" draggable="true">
                 <div class="sentence-content">
-                    <span class="sentence-icon">${icon}</span>
+                    <span class="sentence-icon drag-handle" title="Drag to reorder">⋮⋮</span>
+                    <span class="sentence-type-icon">${icon}</span>
                     <div class="sentence-text">
                         ${this.syntaxHighlighter.highlightSyntax(sentence.text)}
                     </div>
@@ -430,12 +520,50 @@ export class UIController {
                 diagram.innerHTML = svg;
             }
         } catch (error) {
-            console.error('Invalid Mermaid syntax:', error);
-            // Optional: Show an error message to the user
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            this.showError(`Invalid Mermaid syntax: ${message}`);
         }
     }
 
     private handleCodeEditorInput(): void {
         // Optional: Add real-time validation or other features
+    }
+
+    private showError(message: string): void {
+        const diagramElement = document.getElementById('diagram');
+        if (diagramElement) {
+            diagramElement.innerHTML = `
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    private showWarnings(warnings: string[]): void {
+        const diagramContainer = document.querySelector('.diagram-container');
+        const existingWarnings = diagramContainer?.querySelector('.warnings-message');
+        
+        // Always remove existing warnings
+        if (existingWarnings) {
+            existingWarnings.remove();
+        }
+
+        // Only add new warnings if there are any
+        if (warnings.length > 0) {
+            const warningsElement = document.createElement('div');
+            warningsElement.className = 'warnings-message';
+            warningsElement.innerHTML = `
+                <h3>Warnings</h3>
+                <ul>
+                    ${warnings.map(warning => `<li>${warning}</li>`).join('')}
+                </ul>
+            `;
+
+            if (diagramContainer) {
+                diagramContainer.insertBefore(warningsElement, diagramContainer.firstChild);
+            }
+        }
     }
 } 

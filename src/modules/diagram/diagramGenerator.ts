@@ -1,4 +1,6 @@
 import { Sentence } from '../../types/interfaces';
+import { DiagramError, DiagramResult } from '../../types/errors';
+import { ok, err } from 'neverthrow';
 import mermaid from 'mermaid';
 
 export class DiagramGenerator {
@@ -6,11 +8,50 @@ export class DiagramGenerator {
     private linkCount = 0;
     private nodeMap = new Map<string, string>();
 
-    public generateActivityDiagram(sentences: Sentence[]): string {
-        this.nodeCount = 0;
-        this.linkCount = 0;
-        this.nodeMap.clear();
-        let diagram = `
+    public generateActivityDiagram(sentences: Sentence[]): DiagramResult<string> {
+        try {
+            if (!sentences.length) {
+                return err(new DiagramError('No sentences provided to generate diagram'));
+            }
+
+            this.nodeCount = 0;
+            this.linkCount = 0;
+            this.nodeMap.clear();
+
+            let diagram = this.generateDiagramHeader();
+            let lastNode: string | null = null;
+
+            // Process all nodes
+            for (const sentence of sentences) {
+                const element = sentence.uml.elements[0];
+                if (!element) {
+                    return err(new DiagramError(`Invalid sentence structure: ${sentence.text}`));
+                }
+
+                const result = this.processElement(element, lastNode);
+                if (result.isErr()) {
+                    return err(result.error);
+                }
+
+                const { diagramPart, newLastNode } = result.value;
+                diagram += diagramPart;
+                lastNode = newLastNode;
+            }
+
+            // If the last node isn't already connected to an End node, connect it
+            if (lastNode && !sentences.some(s => s.uml.elements[0]?.type === 'end')) {
+                diagram += `    ${lastNode} --> End([End])\n`;
+                diagram += `    class End start-end\n`;
+            }
+
+            return ok(diagram);
+        } catch (error) {
+            return err(new DiagramError(`Failed to generate diagram: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+    }
+
+    private generateDiagramHeader(): string {
+        return `
             %%{
                 init: {
                     'flowchart': {
@@ -39,119 +80,134 @@ export class DiagramGenerator {
             classDef document fill:#fff,stroke:#666,stroke-width:1.5px,font-family:Spline Sans,font-weight:400;
             classDef connection fill:#f3f4f6,stroke:#666,stroke-width:1.5px,font-family:Spline Sans,font-weight:500;
         \n`;
-        let lastNode: string | null = null;
+    }
 
-        sentences.forEach((sentence) => {
-            const element = sentence.uml.elements[0];
-            if (!element) return;
+    private processElement(element: any, lastNode: string | null): DiagramResult<{ diagramPart: string; newLastNode: string | null }> {
+        let diagramPart = '';
+        let newLastNode = lastNode;
 
+        try {
             switch (element.type) {
                 case 'start':
                     const startNodeId = this.getNodeId(element.name);
-                    diagram += `    Start([🟢 Start])\n`;
-                    diagram += `    class Start start-end\n`;
-                    diagram += `    Start --> ${startNodeId}[${element.name}]\n`;
-                    diagram += `    class ${startNodeId} process\n`;
+                    diagramPart += `    Start([Start])\n`;
+                    diagramPart += `    class Start start-end\n`;
+                    diagramPart += `    Start --> ${startNodeId}[${element.name}]\n`;
+                    diagramPart += `    class ${startNodeId} process\n`;
                     this.linkCount++;
-                    lastNode = startNodeId;
+                    newLastNode = startNodeId;
                     break;
 
                 case 'process':
                     const processId = this.getNodeId(element.name);
-                    diagram += `    ${processId}[${element.name}]\n`;
-                    diagram += `    class ${processId} process\n`;
+                    diagramPart += `    ${processId}[${element.name}]\n`;
+                    diagramPart += `    class ${processId} process\n`;
                     if (lastNode) {
-                        diagram += `    ${lastNode} --> ${processId}\n`;
-                        diagram += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
+                        diagramPart += `    ${lastNode} --> ${processId}\n`;
+                        diagramPart += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
                         this.linkCount++;
                     }
-                    lastNode = processId;
+                    newLastNode = processId;
                     break;
 
                 case 'decision':
+                    if (!element.related) {
+                        return err(new DiagramError('Decision node missing "then" branch'));
+                    }
+
                     const decisionId = this.getNodeId(element.name);
-                    const thenId = this.getNodeId(element.related || '');
+                    const thenId = this.getNodeId(element.related);
                     const elseId = element.else ? this.getNodeId(element.else) : null;
                     
-                    // Add the decision node
-                    diagram += `    ${decisionId}{${element.name}}\n`;
-                    diagram += `    class ${decisionId} decision\n`;
+                    diagramPart += `    ${decisionId}{${element.name}}\n`;
+                    diagramPart += `    class ${decisionId} decision\n`;
                     if (lastNode) {
-                        diagram += `    ${lastNode} --> ${decisionId}\n`;
+                        diagramPart += `    ${lastNode} --> ${decisionId}\n`;
                         this.linkCount++;
                     }
                     
-                    // Add 'then' path
-                    diagram += `    ${thenId}[${element.related}]\n`;
-                    diagram += `    ${decisionId} -->|Yes| ${thenId}\n`;
+                    diagramPart += `    ${thenId}[${element.related}]\n`;
+                    diagramPart += `    ${decisionId} -->|Yes| ${thenId}\n`;
                     this.linkCount++;
                     
-                    // Add 'else' path if it exists
                     if (elseId && element.else) {
-                        diagram += `    ${elseId}[${element.else}]\n`;
-                        diagram += `    ${decisionId} -->|No| ${elseId}\n`;
+                        diagramPart += `    ${elseId}[${element.else}]\n`;
+                        diagramPart += `    ${decisionId} -->|No| ${elseId}\n`;
                         this.linkCount++;
-                        diagram += `    linkStyle ${this.getLinkIndex()} stroke:#f44336,stroke-width:2px\n`;
+                        diagramPart += `    linkStyle ${this.getLinkIndex()} stroke:#f44336,stroke-width:2px\n`;
                     }
                     
-                    lastNode = decisionId;
+                    newLastNode = decisionId;
                     break;
 
                 case 'flow':
+                    if (!element.related) {
+                        return err(new DiagramError('Flow node missing target'));
+                    }
+
                     const fromId = this.getNodeId(element.name);
-                    const toId = this.getNodeId(element.related || '');
-                    diagram += `    ${fromId}[${element.name}]\n`;
-                    diagram += `    ${toId}[${element.related}]\n`;
-                    diagram += `    ${fromId} --> ${toId}\n`;
+                    const toId = this.getNodeId(element.related);
+                    diagramPart += `    ${fromId}[${element.name}]\n`;
+                    diagramPart += `    ${toId}[${element.related}]\n`;
+                    diagramPart += `    ${fromId} --> ${toId}\n`;
                     this.linkCount++;
-                    lastNode = toId;
+                    newLastNode = toId;
                     break;
 
                 case 'document':
                     const docId = this.getNodeId(element.name);
-                    diagram += `    ${docId}[/${element.name}/]\n`;
-                    diagram += `    class ${docId} document\n`;
+                    diagramPart += `    ${docId}[/${element.name}/]\n`;
+                    diagramPart += `    class ${docId} document\n`;
                     if (lastNode) {
-                        diagram += `    ${lastNode} --> ${docId}\n`;
-                        diagram += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
+                        diagramPart += `    ${lastNode} --> ${docId}\n`;
+                        diagramPart += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
                         this.linkCount++;
                     }
-                    lastNode = docId;
+                    newLastNode = docId;
                     break;
 
                 case 'connection':
                     const connId = this.getNodeId(element.name);
-                    diagram += `    ${connId}((${element.name}))\n`;
-                    diagram += `    class ${connId} connection\n`;
+                    diagramPart += `    ${connId}((${element.name}))\n`;
+                    diagramPart += `    class ${connId} connection\n`;
                     if (lastNode) {
-                        diagram += `    ${lastNode} --> ${connId}\n`;
-                        diagram += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
+                        diagramPart += `    ${lastNode} --> ${connId}\n`;
+                        diagramPart += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
                         this.linkCount++;
                     }
-                    lastNode = connId;
+                    newLastNode = connId;
                     break;
 
                 case 'end':
                     const endNodeId = this.getNodeId(element.name);
-                    diagram += `    ${endNodeId}[${element.name}]\n`;
-                    diagram += `    class ${endNodeId} process\n`;
-                    if (lastNode) {
-                        diagram += `    ${lastNode} --> ${endNodeId}\n`;
-                        diagram += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
+                    diagramPart += `    ${endNodeId}[${element.name}]\n`;
+                    diagramPart += `    class ${endNodeId} process\n`;
+                    if (lastNode && lastNode !== endNodeId) {
+                        diagramPart += `    ${lastNode} --> ${endNodeId}\n`;
+                        diagramPart += `    linkStyle ${this.linkCount} stroke:#666,stroke-width:2px\n`;
                         this.linkCount++;
                     }
-                    diagram += `    ${endNodeId} --> End([🔴 End])\n`;
-                    diagram += `    class End start-end\n`;
+                    diagramPart += `    ${endNodeId} --> End([End])\n`;
+                    diagramPart += `    class End start-end\n`;
                     this.linkCount++;
-                    lastNode = endNodeId;
+                    newLastNode = null; // Prevent further connections after end
                     break;
-            }
-        });
 
-        return diagram;
+                default:
+                    return err(new DiagramError(`Unknown element type: ${element.type}`));
+            }
+
+            return ok({ diagramPart, newLastNode });
+        } catch (error) {
+            return err(new DiagramError(`Error processing element ${element.type}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
     }
 
     private getNodeId(name: string): string {
+        if (!name) {
+            throw new Error('Node name cannot be empty');
+        }
+
         if (!this.nodeMap.has(name)) {
             this.nodeCount++;
             this.nodeMap.set(name, `N${this.nodeCount}`);
